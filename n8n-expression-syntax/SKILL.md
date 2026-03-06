@@ -19,11 +19,11 @@ All dynamic content in n8n uses **double curly braces**:
 
 **Examples**:
 ```
-✅ {{$json.email}}
-✅ {{$json.body.name}}
-✅ {{$node["HTTP Request"].json.data}}
-❌ $json.email  (no braces - treated as literal text)
-❌ {$json.email}  (single braces - invalid)
+{{$json.email}}
+{{$json.body.name}}
+{{$node["HTTP Request"].json.data}}
+$json.email  (no braces - treated as literal text)
+{$json.email}  (single braces - invalid)
 ```
 
 ---
@@ -31,8 +31,6 @@ All dynamic content in n8n uses **double curly braces**:
 ## Core Variables
 
 ### $json - Current Node Output
-
-Access data from the current node:
 
 ```javascript
 {{$json.fieldName}}
@@ -43,72 +41,55 @@ Access data from the current node:
 
 ### $node - Reference Other Nodes
 
-Access data from any previous node:
-
 ```javascript
 {{$node["Node Name"].json.fieldName}}
 {{$node["HTTP Request"].json.data}}
 {{$node["Webhook"].json.body.email}}
 ```
 
-**Important**:
-- Node names **must** be in quotes
-- Node names are **case-sensitive**
-- Must match exact node name from workflow
+**Important**: Node names **must** be in quotes, are **case-sensitive**, must match exact name.
 
 ### $now - Current Timestamp
-
-Access current date/time:
 
 ```javascript
 {{$now}}
 {{$now.toFormat('yyyy-MM-dd')}}
-{{$now.toFormat('HH:mm:ss')}}
 {{$now.plus({days: 7})}}
 ```
 
 ### $env - Environment Variables
 
-Access environment variables:
-
 ```javascript
 {{$env.API_KEY}}
-{{$env.DATABASE_URL}}
 ```
 
 ---
 
-## 🚨 CRITICAL: Webhook Data Structure
+## CRITICAL: Webhook Data Structure
 
 **Most Common Mistake**: Webhook data is **NOT** at the root!
 
-### Webhook Node Output Structure
-
 ```javascript
+// Webhook Node Output Structure
 {
   "headers": {...},
   "params": {...},
   "query": {...},
-  "body": {           // ⚠️ USER DATA IS HERE!
+  "body": {           // USER DATA IS HERE!
     "name": "John",
-    "email": "john@example.com",
-    "message": "Hello"
+    "email": "john@example.com"
   }
 }
 ```
 
-### Correct Webhook Data Access
-
 ```javascript
-❌ WRONG: {{$json.name}}
-❌ WRONG: {{$json.email}}
+// WRONG:
+{{$json.name}}
 
-✅ CORRECT: {{$json.body.name}}
-✅ CORRECT: {{$json.body.email}}
-✅ CORRECT: {{$json.body.message}}
+// CORRECT:
+{{$json.body.name}}
+{{$json.body.email}}
 ```
-
-**Why**: Webhook node wraps incoming data under `.body` property to preserve headers, params, and query parameters.
 
 ---
 
@@ -117,36 +98,23 @@ Access environment variables:
 ### Access Nested Fields
 
 ```javascript
-// Simple nesting
 {{$json.user.email}}
-
-// Array access
 {{$json.data[0].name}}
-{{$json.items[0].id}}
-
-// Bracket notation for spaces
 {{$json['field name']}}
-{{$json['user data']['first name']}}
 ```
 
 ### Reference Other Nodes
 
 ```javascript
-// Node without spaces
 {{$node["Set"].json.value}}
-
-// Node with spaces (common!)
 {{$node["HTTP Request"].json.data}}
-{{$node["Respond to Webhook"].json.message}}
-
-// Webhook node
 {{$node["Webhook"].json.body.email}}
 ```
 
 ### Combine Variables
 
 ```javascript
-// Concatenation (automatic)
+// In text
 Hello {{$json.body.name}}!
 
 // In URLs
@@ -163,95 +131,39 @@ https://api.example.com/users/{{$json.body.user_id}}
 
 ## When NOT to Use Expressions
 
-### ❌ Code Nodes
+### Code Nodes
 
 Code nodes use **direct JavaScript access**, NOT expressions!
 
 ```javascript
-// ❌ WRONG in Code node
+// WRONG in Code node
 const email = '={{$json.email}}';
-const name = '{{$json.body.name}}';
 
-// ✅ CORRECT in Code node
+// CORRECT in Code node
 const email = $json.email;
-const name = $json.body.name;
-
-// Or using Code node API
 const email = $input.item.json.email;
-const allItems = $input.all();
 ```
 
-### ❌ Webhook Paths
+### Webhook Paths
+Static paths only: `path: "user-webhook"`
 
-```javascript
-// ❌ WRONG
-path: "{{$json.user_id}}/webhook"
-
-// ✅ CORRECT
-path: "user-webhook"  // Static paths only
-```
-
-### ❌ Credential Fields
-
-```javascript
-// ❌ WRONG
-apiKey: "={{$env.API_KEY}}"
-
-// ✅ CORRECT
-Use n8n credential system, not expressions
-```
+### Credential Fields
+Use n8n credential system, not expressions.
 
 ---
 
 ## Validation Rules
 
-### 1. Always Use {{}}
-
-Expressions **must** be wrapped in double curly braces.
-
-```javascript
-❌ $json.field
-✅ {{$json.field}}
-```
-
-### 2. Use Quotes for Spaces
-
-Field or node names with spaces require **bracket notation**:
-
-```javascript
-❌ {{$json.field name}}
-✅ {{$json['field name']}}
-
-❌ {{$node.HTTP Request.json}}
-✅ {{$node["HTTP Request"].json}}
-```
-
-### 3. Match Exact Node Names
-
-Node references are **case-sensitive**:
-
-```javascript
-❌ {{$node["http request"].json}}  // lowercase
-❌ {{$node["Http Request"].json}}  // wrong case
-✅ {{$node["HTTP Request"].json}}  // exact match
-```
-
-### 4. No Nested {{}}
-
-Don't double-wrap expressions:
-
-```javascript
-❌ {{{$json.field}}}
-✅ {{$json.field}}
-```
+| Rule | Wrong | Correct |
+|------|-------|---------|
+| Always use `{{}}` | `$json.field` | `{{$json.field}}` |
+| Quotes for spaces | `{{$json.field name}}` | `{{$json['field name']}}` |
+| Exact node names | `{{$node["http request"]}}` | `{{$node["HTTP Request"]}}` |
+| No nested `{{}}` | `{{{$json.field}}}` | `{{$json.field}}` |
 
 ---
 
-## Common Mistakes
-
-For complete error catalog with fixes, see [COMMON_MISTAKES.md](COMMON_MISTAKES.md)
-
-### Quick Fixes
+## Quick Fixes Table
 
 | Mistake | Fix |
 |---------|-----|
@@ -266,44 +178,19 @@ For complete error catalog with fixes, see [COMMON_MISTAKES.md](COMMON_MISTAKES.
 
 ## Working Examples
 
-For real workflow examples, see [EXAMPLES.md](EXAMPLES.md)
-
 ### Example 1: Webhook to Slack
 
-**Webhook receives**:
-```json
-{
-  "body": {
-    "name": "John Doe",
-    "email": "john@example.com",
-    "message": "Hello!"
-  }
-}
-```
+**Webhook receives**: `{"body": {"name": "John", "email": "john@example.com"}}`
 
 **In Slack node text field**:
 ```
 New form submission!
-
 Name: {{$json.body.name}}
 Email: {{$json.body.email}}
-Message: {{$json.body.message}}
 ```
 
 ### Example 2: HTTP Request to Email
 
-**HTTP Request returns**:
-```json
-{
-  "data": {
-    "items": [
-      {"name": "Product 1", "price": 29.99}
-    ]
-  }
-}
-```
-
-**In Email node** (reference HTTP Request):
 ```
 Product: {{$node["HTTP Request"].json.data.items[0].name}}
 Price: ${{$node["HTTP Request"].json.data.items[0].price}}
@@ -312,170 +199,23 @@ Price: ${{$node["HTTP Request"].json.data.items[0].price}}
 ### Example 3: Format Timestamp
 
 ```javascript
-// Current date
-{{$now.toFormat('yyyy-MM-dd')}}
-// Result: 2025-10-20
-
-// Time
-{{$now.toFormat('HH:mm:ss')}}
-// Result: 14:30:45
-
-// Full datetime
-{{$now.toFormat('yyyy-MM-dd HH:mm')}}
-// Result: 2025-10-20 14:30
+{{$now.toFormat('yyyy-MM-dd')}}       // 2025-10-20
+{{$now.toFormat('HH:mm:ss')}}         // 14:30:45
+{{$now.toFormat('yyyy-MM-dd HH:mm')}} // 2025-10-20 14:30
 ```
-
----
-
-## Data Type Handling
-
-### Arrays
-
-```javascript
-// First item
-{{$json.users[0].email}}
-
-// Array length
-{{$json.users.length}}
-
-// Last item
-{{$json.users[$json.users.length - 1].name}}
-```
-
-### Objects
-
-```javascript
-// Dot notation (no spaces)
-{{$json.user.email}}
-
-// Bracket notation (with spaces or dynamic)
-{{$json['user data'].email}}
-```
-
-### Strings
-
-```javascript
-// Concatenation (automatic)
-Hello {{$json.name}}!
-
-// String methods
-{{$json.email.toLowerCase()}}
-{{$json.name.toUpperCase()}}
-```
-
-### Numbers
-
-```javascript
-// Direct use
-{{$json.price}}
-
-// Math operations
-{{$json.price * 1.1}}  // Add 10%
-{{$json.quantity + 5}}
-```
-
----
-
-## Advanced Patterns
-
-### Conditional Content
-
-```javascript
-// Ternary operator
-{{$json.status === 'active' ? 'Active User' : 'Inactive User'}}
-
-// Default values
-{{$json.email || 'no-email@example.com'}}
-```
-
-### Date Manipulation
-
-```javascript
-// Add days
-{{$now.plus({days: 7}).toFormat('yyyy-MM-dd')}}
-
-// Subtract hours
-{{$now.minus({hours: 24}).toISO()}}
-
-// Set specific date
-{{DateTime.fromISO('2025-12-25').toFormat('MMMM dd, yyyy')}}
-```
-
-### String Manipulation
-
-```javascript
-// Substring
-{{$json.email.substring(0, 5)}}
-
-// Replace
-{{$json.message.replace('old', 'new')}}
-
-// Split and join
-{{$json.tags.split(',').join(', ')}}
-```
-
----
-
-## Debugging Expressions
-
-### Test in Expression Editor
-
-1. Click field with expression
-2. Open expression editor (click "fx" icon)
-3. See live preview of result
-4. Check for errors highlighted in red
-
-### Common Error Messages
-
-**"Cannot read property 'X' of undefined"**
-→ Parent object doesn't exist
-→ Check your data path
-
-**"X is not a function"**
-→ Trying to call method on non-function
-→ Check variable type
-
-**Expression shows as literal text**
-→ Missing {{ }}
-→ Add curly braces
-
----
-
-## Expression Helpers
-
-### Available Methods
-
-**String**:
-- `.toLowerCase()`, `.toUpperCase()`
-- `.trim()`, `.replace()`, `.substring()`
-- `.split()`, `.includes()`
-
-**Array**:
-- `.length`, `.map()`, `.filter()`
-- `.find()`, `.join()`, `.slice()`
-
-**DateTime** (Luxon):
-- `.toFormat()`, `.toISO()`, `.toLocal()`
-- `.plus()`, `.minus()`, `.set()`
-
-**Number**:
-- `.toFixed()`, `.toString()`
-- Math operations: `+`, `-`, `*`, `/`, `%`
 
 ---
 
 ## Best Practices
 
-### ✅ Do
-
+### Do
 - Always use {{ }} for dynamic content
 - Use bracket notation for field names with spaces
 - Reference webhook data from `.body`
 - Use $node for data from other nodes
 - Test expressions in expression editor
 
-### ❌ Don't
-
+### Don't
 - Don't use expressions in Code nodes
 - Don't forget quotes around node names with spaces
 - Don't double-wrap with extra {{ }}
@@ -484,11 +224,11 @@ Hello {{$json.name}}!
 
 ---
 
-## Related Skills
+## Detailed References
 
-- **n8n MCP Tools Expert**: Learn how to validate expressions using MCP tools
-- **n8n Workflow Patterns**: See expressions in real workflow examples
-- **n8n Node Configuration**: Understand when expressions are needed
+- **[COMMON_MISTAKES.md](COMMON_MISTAKES.md)** - Complete error catalog with fixes
+- **[EXAMPLES.md](EXAMPLES.md)** - Real workflow examples
+- **[ADVANCED_EXPRESSIONS.md](ADVANCED_EXPRESSIONS.md)** - Data types (arrays, objects, strings, numbers), advanced patterns (conditionals, dates, string manipulation), debugging, expression helpers
 
 ---
 
@@ -501,16 +241,7 @@ Hello {{$json.name}}!
 4. Quote node names with spaces
 5. Node names are case-sensitive
 
-**Most Common Mistakes**:
-- Missing {{ }} → Add braces
-- `{{$json.name}}` in webhooks → Use `{{$json.body.name}}`
-- `{{$json.email}}` in Code → Use `$json.email`
-- `{{$node.HTTP Request}}` → Use `{{$node["HTTP Request"]}}`
-
-For more details, see:
-- [COMMON_MISTAKES.md](COMMON_MISTAKES.md) - Complete error catalog
-- [EXAMPLES.md](EXAMPLES.md) - Real workflow examples
-
----
-
-**Need Help?** Reference the n8n expression documentation or use n8n-mcp validation tools to check your expressions.
+**Related Skills**:
+- **n8n MCP Tools Expert**: Validate expressions using MCP tools
+- **n8n Workflow Patterns**: See expressions in real workflow examples
+- **n8n Node Configuration**: Understand when expressions are needed
