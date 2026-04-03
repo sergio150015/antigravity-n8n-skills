@@ -1,4 +1,6 @@
-# antigravity-n8n-skills
+# antigravity-n8n-skills — CONSOLIDADAS em `.claude/skills/`
+
+> **IMPORTANTE (2026-03-16)**: As 7 skills N8N foram **consolidadas** na pasta principal `.claude/skills/` do Claude Code. A versao autoritativa (que o Claude Code carrega automaticamente) e a de `.claude/skills/`. Esta pasta permanece como backup/referencia historica e para uso pelo Google Antigravity. NAO editar aqui para uso no Claude Code — editar em `.claude/skills/`.
 
 **Expert Google Antigravity skills for building flawless n8n workflows.**
 
