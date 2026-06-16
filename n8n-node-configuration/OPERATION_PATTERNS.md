@@ -391,9 +391,11 @@ Database operations - 456 templates
 {
   "operation": "executeQuery",
   "query": "SELECT * FROM users WHERE email = $1 AND active = $2",
-  "additionalFields": {
-    "mode": "list",
-    "queryParameters": "user@example.com,true"
+  // Postgres node v2.6+: bind $N em options.queryReplacement (array via expression).
+  // NUNCA em parameters top-level nem additionalFields — ignorado silenciosamente,
+  // options:{} vazio no runtime -> "there is no parameter $2" (RULE-N8N-POSTGRES-QR-01, s429)
+  "options": {
+    "queryReplacement": "={{ [$json.email, true] }}"
   }
 }
 ```
@@ -406,12 +408,11 @@ Database operations - 456 templates
   "query": "SELECT * FROM users WHERE email = '{{$json.email}}'"
 }
 
-// ✅ GOOD - Parameterized
+// ✅ GOOD - Parameterized (Postgres v2.6+: options.queryReplacement)
 {
   "query": "SELECT * FROM users WHERE email = $1",
-  "additionalFields": {
-    "mode": "list",
-    "queryParameters": "={{$json.email}}"
+  "options": {
+    "queryReplacement": "={{ [$json.email] }}"
   }
 }
 ```

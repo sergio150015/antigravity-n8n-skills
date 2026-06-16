@@ -156,10 +156,12 @@ LIMIT 1000
 {
   operation: "executeQuery",
   query: "SELECT id, name, email FROM users WHERE created_at > $1 LIMIT $2",
-  parameters: [
-    "={{$json.since_date}}",
-    "100"
-  ]
+  // Postgres node v2.6+: bind $N em options.queryReplacement (array).
+  // NUNCA em parameters top-level — ignorado silenciosamente, options:{} vazio
+  // no runtime -> "there is no parameter $2" (RULE-N8N-POSTGRES-QR-01, s429)
+  options: {
+    queryReplacement: "={{ [$json.since_date, 100] }}"
+  }
 }
 ```
 
@@ -206,11 +208,10 @@ LIMIT 1000
     ON CONFLICT (id)
     DO UPDATE SET name = $2, email = $3, updated_at = NOW()
   `,
-  parameters: [
-    "={{$json.id}}",
-    "={{$json.name}}",
-    "={{$json.email}}"
-  ]
+  // Postgres v2.6+: bind em options.queryReplacement (RULE-N8N-POSTGRES-QR-01)
+  options: {
+    queryReplacement: "={{ [$json.id, $json.name, $json.email] }}"
+  }
 }
 ```
 
@@ -496,10 +497,10 @@ WHERE created_at > $1
 Parameterized queries are faster:
 
 ```javascript
-// ✅ Good - prepared statement
+// ✅ Good - prepared statement (Postgres v2.6+: options.queryReplacement)
 {
   query: "SELECT * FROM users WHERE id = $1",
-  parameters: ["={{$json.id}}"]
+  options: { queryReplacement: "={{ [$json.id] }}" }
 }
 
 // ❌ Bad - string concatenation
@@ -584,10 +585,10 @@ Error Trigger:
 
 ### 1. Use Parameterized Queries (Prevent SQL Injection)
 ```javascript
-// ✅ SAFE - parameterized
+// ✅ SAFE - parameterized (Postgres v2.6+: options.queryReplacement)
 {
   query: "SELECT * FROM users WHERE email = $1",
-  parameters: ["={{$json.email}}"]
+  options: { queryReplacement: "={{ [$json.email] }}" }
 }
 
 // ❌ DANGEROUS - SQL injection risk
@@ -675,10 +676,10 @@ LIMIT 1000
 query: "SELECT * FROM users WHERE id = '{{$json.id}}'"
 ```
 
-### ✅ Correct: Parameterized queries
+### ✅ Correct: Parameterized queries (Postgres v2.6+: options.queryReplacement)
 ```javascript
 query: "SELECT * FROM users WHERE id = $1",
-parameters: ["={{$json.id}}"]
+options: { queryReplacement: "={{ [$json.id] }}" }
 ```
 
 ### 3. ❌ Wrong: No transaction for multi-step operations
